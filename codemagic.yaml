@@ -3,14 +3,12 @@ workflows:
     name: CocktailBot iOS Check (ohne Signierung)
     max_build_duration: 60
     instance_type: mac_mini_m2
-
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
         BUNDLE_ID: "de.cocktailbot.app"
-
     scripts:
       - name: iOS-Xcode-Projekt erzeugen und für ESP vorbereiten
         script: |
@@ -19,11 +17,8 @@ workflows:
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
           echo "iOS Xcode project is ready."
-
       - name: Flutter-Pakete laden
-        script: |
-          flutter pub get
-
+        script: flutter pub get
       - name: CocoaPods installieren
         script: |
           if [ -f ios/Podfile ]; then
@@ -33,24 +28,16 @@ workflows:
           else
             echo "Kein Podfile vorhanden - CocoaPods wird übersprungen."
           fi
-<<<<<<< HEAD
-=======
-
->>>>>>> 1c14db1220d56e81db37acc02f930099f596807b
       - name: iOS-Simulator-Build
-        script: |
-          flutter build ios --simulator --debug
-
+        script: flutter build ios --simulator --debug
     artifacts:
       - build/ios/iphonesimulator/Runner.app
       - /tmp/xcodebuild_logs/*.log
-
 
   ios-release:
     name: CocktailBot iOS IPA (signiert)
     max_build_duration: 120
     instance_type: mac_mini_m2
-
     environment:
       ios_signing:
         distribution_type: app_store
@@ -60,7 +47,6 @@ workflows:
       cocoapods: default
       vars:
         BUNDLE_ID: "de.cocktailbot.app"
-
     scripts:
       - name: iOS-Xcode-Projekt erzeugen und für ESP vorbereiten
         script: |
@@ -69,11 +55,8 @@ workflows:
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
           echo "iOS Xcode project is ready."
-
       - name: Flutter-Pakete laden
-        script: |
-          flutter pub get
-
+        script: flutter pub get
       - name: CocoaPods installieren
         script: |
           if [ -f ios/Podfile ]; then
@@ -83,19 +66,10 @@ workflows:
           else
             echo "Kein Podfile vorhanden - CocoaPods wird übersprungen."
           fi
-<<<<<<< HEAD
-=======
-
->>>>>>> 1c14db1220d56e81db37acc02f930099f596807b
       - name: Apple-Code-Signierung anwenden
-        script: |
-          xcode-project use-profiles
-
+        script: xcode-project use-profiles
       - name: Signierte IPA bauen
-        script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
-
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
