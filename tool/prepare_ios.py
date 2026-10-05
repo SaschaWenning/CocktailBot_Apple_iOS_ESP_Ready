@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate and configure the Flutter iOS host project for CocktailBot.
 
-This script is designed for Codemagic/macOS CI. It keeps the existing Flutter
-app source intact, generates the missing ios/ host project with Flutter, and
-adds the privacy/network settings required to talk to a local ESP controller.
+Designed for Codemagic/macOS CI. If an incomplete placeholder ``ios/`` folder
+exists, it is removed first so Flutter can generate a real Xcode project.
+The existing Flutter/Dart app source and ESP HTTP control logic are preserved.
 """
 from __future__ import annotations
 
@@ -24,10 +24,16 @@ def run(*args: str) -> None:
     subprocess.run(args, cwd=ROOT, check=True)
 
 
+def ios_project_complete() -> bool:
+    return (
+        (ROOT / "ios" / "Runner.xcodeproj" / "project.pbxproj").is_file()
+        and (ROOT / "ios" / "Runner" / "Info.plist").is_file()
+    )
+
+
 def generate_ios() -> None:
-    runner = ROOT / "ios" / "Runner" / "Info.plist"
-    if runner.exists():
-        print("iOS host project already exists; generation skipped.")
+    if ios_project_complete():
+        print("Complete iOS host project already exists; generation skipped.")
         return
 
     if shutil.which("flutter") is None:
@@ -36,17 +42,22 @@ def generate_ios() -> None:
             "(for example Codemagic)."
         )
 
-    # flutter create may refresh common project files. Preserve the app files
-    # supplied by the user so the Android/web functionality is not replaced.
+    ios_dir = ROOT / "ios"
+    if ios_dir.exists():
+        print("Removing incomplete ios/ placeholder before Flutter generation.")
+        shutil.rmtree(ios_dir)
+
+    # flutter create can refresh common files. Back up the user's app source and
+    # manifest, then restore them so the working Android/ESP app logic stays intact.
     preserve = [ROOT / "lib" / "main.dart", ROOT / "pubspec.yaml"]
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
         saved: list[tuple[Path, Path]] = []
-        for src in preserve:
-            if src.exists():
-                dst = tmpdir / src.name
-                shutil.copy2(src, dst)
-                saved.append((src, dst))
+        for original in preserve:
+            if original.exists():
+                backup = tmpdir / original.name
+                shutil.copy2(original, backup)
+                saved.append((original, backup))
 
         run(
             "flutter",
@@ -59,8 +70,14 @@ def generate_ios() -> None:
             ".",
         )
 
-        for dst, src in saved:
-            shutil.copy2(src, dst)
+        for original, backup in saved:
+            shutil.copy2(backup, original)
+
+    if not ios_project_complete():
+        raise SystemExit(
+            "Flutter finished, but ios/Runner.xcodeproj or ios/Runner/Info.plist "
+            "was not generated."
+        )
 
 
 def patch_info_plist() -> None:
@@ -80,7 +97,7 @@ def patch_info_plist() -> None:
     ats = data.get("NSAppTransportSecurity")
     if not isinstance(ats, dict):
         ats = {}
-    # Keep ATS enabled for the internet; only local networking is allowed.
+    # Keep ATS enabled for internet traffic while explicitly permitting local LAN use.
     ats["NSAllowsLocalNetworking"] = True
     data["NSAppTransportSecurity"] = ats
 
@@ -128,6 +145,11 @@ def main() -> None:
     generate_ios()
     patch_info_plist()
     patch_bundle_id(args.bundle_id)
+
+    pbx = ROOT / "ios" / "Runner.xcodeproj" / "project.pbxproj"
+    plist = ROOT / "ios" / "Runner" / "Info.plist"
+    print(f"Verified: {pbx.relative_to(ROOT)}")
+    print(f"Verified: {plist.relative_to(ROOT)}")
     print("CocktailBot iOS preparation complete.")
 
 

@@ -10,12 +10,19 @@ workflows:
       vars:
         BUNDLE_ID: "de.cocktailbot.app"
     scripts:
-      - name: iOS-Projekt erzeugen und für ESP vorbereiten
-        script: python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
+      - name: iOS-Xcode-Projekt erzeugen und für ESP vorbereiten
+        script: |
+          set -e
+          python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
+          test -f ios/Runner.xcodeproj/project.pbxproj
+          test -f ios/Runner/Info.plist
+          echo "iOS Xcode project is ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
       - name: CocoaPods installieren
-        script: find ios -name "Podfile" -execdir pod install \;
+        script: |
+          cd ios
+          pod install
       - name: iOS-Simulator-Build
         script: flutter build ios --simulator --debug
     artifacts:
@@ -36,12 +43,19 @@ workflows:
       vars:
         BUNDLE_ID: "de.cocktailbot.app"
     scripts:
-      - name: iOS-Projekt erzeugen und für ESP vorbereiten
-        script: python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
+      - name: iOS-Xcode-Projekt erzeugen und für ESP vorbereiten
+        script: |
+          set -e
+          python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
+          test -f ios/Runner.xcodeproj/project.pbxproj
+          test -f ios/Runner/Info.plist
+          echo "iOS Xcode project is ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
       - name: CocoaPods installieren
-        script: find ios -name "Podfile" -execdir pod install \;
+        script: |
+          cd ios
+          pod install
       - name: Apple-Code-Signierung anwenden
         script: xcode-project use-profiles
       - name: Signierte IPA bauen

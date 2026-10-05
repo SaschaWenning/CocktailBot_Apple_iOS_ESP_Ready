@@ -1,45 +1,48 @@
-# CocktailBot für iPhone/iPad – ohne eigenen Mac
+# CocktailBot für iPhone/iPad ohne eigenen Mac
 
-Dieses Paket enthält die bestehende Flutter-App inklusive der vorhandenen Maschinen-/Pumpensteuerung. Die HTTP-API (`/api/status`, `/api/command` usw.) wurde nicht ersetzt. Für iOS wurden die native Netzwerkbehandlung und der Cloud-Build ergänzt.
+Dieses Paket enthält die vorhandene Flutter-App samt ESP-Steuerlogik und eine Codemagic-Konfiguration, die das fehlende native iOS/Xcode-Projekt erst auf dem Cloud-Mac erzeugt.
 
-## Was angepasst wurde
+## Wichtig: Codemagic als YAML-Workflow starten
 
-- Native iOS-App kann den ESP über seine IP-Adresse bzw. seinen Hostnamen ansprechen.
-- Wenn auf iOS/Android noch keine ESP-Adresse eingetragen ist, zeigt die App jetzt eine klare Meldung statt einen ungültigen Same-Origin-Aufruf zu versuchen.
-- iOS erhält automatisch die Apple-Datenschutzbeschreibung für den Zugriff auf das lokale Netzwerk.
-- Lokale HTTP-/`.local`-Verbindungen werden über `NSAllowsLocalNetworking` ermöglicht, ohne den gesamten App Transport Security-Schutz abzuschalten.
-- Die Pumpen-, Status- und LED-Befehle bleiben in `lib/main.dart` enthalten.
-- `codemagic.yaml` enthält einen unsignierten Prüfbuild und einen signierten IPA-Build.
+Die Datei `codemagic.yaml` muss im **Hauptverzeichnis des GitHub-Repositories** liegen und mit hochgeladen/committed werden.
 
-## ESP in der App
+In Codemagic:
 
-Auf dem iPhone/iPad unter **Einstellungen → Verbindung** die ESP-Adresse eintragen, zum Beispiel:
+1. Repository/Branch aktualisieren, damit diese neue Version wirklich enthalten ist.
+2. Bei der App den Branch auswählen und **Check for configuration file** / `codemagic.yaml` verwenden.
+3. Als ersten Test den Workflow **CocktailBot iOS Check (ohne Signierung)** starten.
+4. Nicht den automatisch eingerichteten iOS-Workflow aus dem Flutter Workflow Editor verwenden. Dieser versucht das Xcode-Projekt zu finden, bevor unser Erzeugungsschritt läuft.
 
-- `192.168.4.1`
-- `192.168.178.50`
-- `cocktailbot.local`
-- oder eine vollständige URL wie `http://192.168.4.1`
+## Warum der frühere Build fehlgeschlagen ist
 
-Die App hängt die vorhandenen API-Pfade automatisch an. ESP und iPhone müssen sich im passenden lokalen Netzwerk befinden. Beim ersten Zugriff fragt iOS nach der Berechtigung **Lokales Netzwerk** – diese erlauben.
+Im alten Paket existierte ein Ordner `ios/`, der nur eine README enthielt. Codemagic erkannte dadurch eine iOS-Struktur, fand aber `ios/Runner.xcodeproj` nicht. Das führte zu:
 
-## Build ohne Mac mit Codemagic
+`Did not find xcodeproj from /Users/builder/clone/ios`
 
-1. Den kompletten Inhalt dieses Ordners in ein GitHub-Repository hochladen.
-2. Bei Codemagic das GitHub-Repository verbinden.
-3. Codemagic erkennt die Datei `codemagic.yaml`.
-4. Zuerst Workflow **CocktailBot iOS Check (ohne Signierung)** starten. Dafür ist noch keine Apple-Signierung nötig.
-5. Für eine installierbare/TestFlight-IPA im Apple Developer Portal die Bundle-ID `de.cocktailbot.app` anlegen. Falls sie nicht verfügbar ist, in `codemagic.yaml` beide Vorkommen von `de.cocktailbot.app` durch deine eigene eindeutige Bundle-ID ersetzen.
-6. In Codemagic die Apple-Signing-Zertifikate und das passende App-Store-Provisioning-Profil hinterlegen bzw. über App Store Connect beziehen.
-7. Workflow **CocktailBot iOS IPA (signiert)** starten.
-8. Die fertige `.ipa` erscheint bei den Build-Artefakten. Für TestFlight kann sie anschließend zu App Store Connect hochgeladen werden.
+In dieser korrigierten Version gibt es **keinen leeren ios-Platzhalter** mehr. Der erste Codemagic-Schritt führt `tool/prepare_ios.py` aus. Das Skript:
 
-## Wichtige Dateien
+- entfernt ein eventuell unvollständiges `ios/` automatisch,
+- führt `flutter create --platforms=ios ...` aus,
+- prüft explizit, dass `ios/Runner.xcodeproj/project.pbxproj` erzeugt wurde,
+- ergänzt die iOS-Berechtigung für das lokale Netzwerk,
+- erlaubt lokalen Netzwerkverkehr zum ESP,
+- setzt den Bundle Identifier,
+- verändert die bestehende Dart-/ESP-Steuerlogik nicht.
 
-- `lib/main.dart` – komplette CocktailBot-App und ESP-Steuerlogik
-- `tool/prepare_ios.py` – erzeugt das fehlende Xcode/iOS-Projekt auf dem Cloud-Mac und setzt die iOS-Netzwerkrechte
-- `codemagic.yaml` – Cloud-Builds
-- `ios/README_GENERATED_ON_CLOUD.md` – Erklärung zum dynamisch erzeugten iOS-Unterbau
+## Erster Build
 
-## Android
+Starte zuerst:
 
-Die bestehende API-Struktur und die Steuerbefehle wurden nicht auf eine neue Technik umgestellt. Die Änderung an der Host-Auflösung betrifft native Apps nur dann, wenn noch keine ESP-Adresse konfiguriert wurde; bei einer gespeicherten ESP-Adresse wird dieselbe HTTP-Steuerung wie bisher verwendet.
+**CocktailBot iOS Check (ohne Signierung)**
+
+Im Log sollte früh erscheinen:
+
+- `iOS Xcode project is ready.`
+- `Verified: ios/Runner.xcodeproj/project.pbxproj`
+- `Verified: ios/Runner/Info.plist`
+
+Erst wenn dieser Workflow erfolgreich ist, den signierten Workflow **CocktailBot iOS IPA (signiert)** konfigurieren/starten.
+
+## ESP-Verbindung
+
+Die vorhandene HTTP-Steuerung der App bleibt bestehen. Auf dem iPhone muss der Zugriff auf das lokale Netzwerk erlaubt werden. Anschließend wird in der App wie unter Android die IP/der Hostname des ESP verwendet.
