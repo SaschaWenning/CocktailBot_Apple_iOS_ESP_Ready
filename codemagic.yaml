@@ -1,0 +1,51 @@
+workflows:
+  ios-simulator-check:
+    name: CocktailBot iOS Check (ohne Signierung)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: "de.cocktailbot.app"
+    scripts:
+      - name: iOS-Projekt erzeugen und für ESP vorbereiten
+        script: python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
+      - name: Flutter-Pakete laden
+        script: flutter pub get
+      - name: CocoaPods installieren
+        script: find ios -name "Podfile" -execdir pod install \;
+      - name: iOS-Simulator-Build
+        script: flutter build ios --simulator --debug
+    artifacts:
+      - build/ios/iphonesimulator/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+
+  ios-release:
+    name: CocktailBot iOS IPA (signiert)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: de.cocktailbot.app
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: "de.cocktailbot.app"
+    scripts:
+      - name: iOS-Projekt erzeugen und für ESP vorbereiten
+        script: python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
+      - name: Flutter-Pakete laden
+        script: flutter pub get
+      - name: CocoaPods installieren
+        script: find ios -name "Podfile" -execdir pod install \;
+      - name: Apple-Code-Signierung anwenden
+        script: xcode-project use-profiles
+      - name: Signierte IPA bauen
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log

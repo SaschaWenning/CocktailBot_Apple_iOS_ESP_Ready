@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -2424,6 +2425,13 @@ String appText(AppLanguage language, String key) {
     },
   };
   final settingsEnglishFallback = <String, String>{
+    'ESP verbunden': 'ESP connected',
+    'ESP-Steuerung': 'ESP control',
+    'ESP-Steuerung verbunden': 'ESP control connected',
+    'ESP-Steuerung antwortet nicht': 'ESP control is not responding',
+    'ESP-Steuerung nicht erreichbar': 'ESP control is not reachable',
+    'Bitte ESP-Adresse eingeben': 'Please enter the ESP address',
+    'Steuerung über den lokalen ESP-Controller. Auf iPhone/iPad oder Android die IP-Adresse bzw. den Hostnamen des ESP eintragen. In der Web-/Kiosk-Version kann das Feld leer bleiben, wenn App und API vom selben Host ausgeliefert werden.': 'Control via the local ESP controller. On iPhone/iPad or Android, enter the ESP IP address or host name. In the web/kiosk version, the field can stay empty if the app and API are served from the same host.',
     'Diese Einstellungen gelten für Cocktails, alkoholfreie Cocktails und Shots. Auf den Cocktail-Seiten selbst wird die obere Navigation angezeigt.': 'These settings apply to cocktails, alcohol-free cocktails and shots. The top navigation is shown on the cocktail pages.',
     'Laden': 'Load',
     'Rezepte': 'Recipes',
@@ -2433,7 +2441,7 @@ String appText(AppLanguage language, String key) {
     'LED-Einstellungen gespeichert. Sie werden beim nächsten Verbinden übertragen.': 'LED settings saved. They will be transferred the next time a connection is established.',
     'Nächste Pumpe wird vorbereitet': 'Preparing next pump',
     'läuft': 'running',
-    'Zeitüberschreitung beim Warten auf die Raspberry-Steuerung': 'Timed out while waiting for Raspberry control',
+    'Zeitüberschreitung beim Warten auf die ESP-Steuerung': 'Timed out while waiting for ESP control',
     'Statistik': 'Statistics',
     'Kosten- und Margenberechnung': 'Cost and margin calculation',
     'CSV/PDF-Export vorbereitet': 'CSV/PDF export prepared',
@@ -3220,7 +3228,7 @@ class MachineStore extends ChangeNotifier {
   AppColorThemeConfig appColors = AppColorThemeConfig.defaults();
   bool connected = false;
   ConnectionMode connectionMode = ConnectionMode.wifi;
-  String wifiHost = ''; // leer = gleicher Host wie die Kiosk-Webseite
+  String wifiHost = ''; // Web: leer = Same-Origin; iOS/Android: ESP-IP/Hostname eintragen
   String status = 'Nicht verbunden';
   bool loaded = false;
   List<double> servingSizes = [200, 300, 400];
@@ -5594,10 +5602,17 @@ class MachineStore extends ChangeNotifier {
   Uri _apiUri(String path) {
     final configuredHost = wifiHost.trim();
 
-    // Im Raspberry-Kiosk werden Flutter-Web-App und GPIO-API vom selben
-    // lokalen Dienst ausgeliefert. Leer = Same-Origin.
+    // In der Web-/Kiosk-Version kann die API vom selben Host kommen.
+    // Native Apps (iOS/Android) haben dagegen keinen sinnvollen Same-Origin-
+    // Host und benötigen deshalb die IP-Adresse bzw. den Hostnamen des ESP.
     if (configuredHost.isEmpty) {
-      return Uri.base.resolve(path);
+      if (kIsWeb) {
+        return Uri.base.resolve(path);
+      }
+      throw StateError(
+        'ESP-Adresse fehlt. Bitte unter Verbindung die IP-Adresse oder den '
+        'Hostnamen des ESP eintragen.',
+      );
     }
 
     final baseText = configuredHost.contains('://')
@@ -5647,7 +5662,7 @@ class MachineStore extends ChangeNotifier {
     }
 
     if (connectionMode == ConnectionMode.bluetooth) {
-      throw Exception('Bluetooth ist in der Raspberry-Kiosk-Version deaktiviert');
+      throw Exception('Bluetooth ist für diese ESP-Steuerung deaktiviert');
     }
 
     final response = await http
@@ -5660,7 +5675,7 @@ class MachineStore extends ChangeNotifier {
 
     final responseBody = response.body;
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      String message = 'Raspberry HTTP ${response.statusCode}';
+      String message = 'ESP HTTP ${response.statusCode}';
       if (responseBody.trim().isNotEmpty) {
         try {
           final decoded = jsonDecode(responseBody);
@@ -5724,13 +5739,15 @@ class MachineStore extends ChangeNotifier {
           .timeout(const Duration(seconds: 3));
       connected = response.statusCode == 200;
       status = connected
-          ? 'Raspberry-Pi-Steuerung verbunden'
-          : 'Raspberry-Pi-Steuerung antwortet nicht';
+          ? 'ESP-Steuerung verbunden'
+          : 'ESP-Steuerung antwortet nicht';
     } catch (_) {
       connected = false;
-      status = wifiHost.trim().isEmpty
-          ? 'Lokale Raspberry-Pi-Steuerung nicht erreichbar'
-          : 'Keine Antwort von $wifiHost';
+      status = wifiHost.trim().isEmpty && !kIsWeb
+          ? 'Bitte ESP-Adresse eingeben'
+          : wifiHost.trim().isEmpty
+              ? 'ESP-Steuerung nicht erreichbar'
+              : 'Keine Antwort von $wifiHost';
     }
 
     notifyListeners();
@@ -5770,17 +5787,17 @@ class MachineStore extends ChangeNotifier {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'Raspberry Status HTTP ${response.statusCode}: $responseBody',
+        'ESP Status HTTP ${response.statusCode}: $responseBody',
       );
     }
 
     final decoded = jsonDecode(responseBody);
     if (decoded is! Map<String, dynamic>) {
-      throw Exception('Ungültige Statusantwort der Raspberry-Steuerung');
+      throw Exception('Ungültige Statusantwort der ESP-Steuerung');
     }
 
     connected = true;
-    status = 'Raspberry-Pi-Steuerung verbunden';
+    status = 'ESP-Steuerung verbunden';
     notifyListeners();
     return decoded;
   }
@@ -6398,7 +6415,7 @@ class MachineStatusCard extends StatelessWidget {
   const MachineStatusCard({super.key, required this.store}); final MachineStore store;
   @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: Container(
     padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: store.appColors.surfaceColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: store.appColors.borderColor)),
-    child: Row(children: [Icon(Icons.memory, color: store.appColors.textSecondaryColor), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(store.t('machine'), style: const TextStyle(fontWeight: FontWeight.w700)), T('CocktailBot-RaspberryPi', style: TextStyle(fontSize: 11, color: store.appColors.textSecondaryColor)), Text(store.connected ? store.t('online') : store.t('offline'), style: TextStyle(fontSize: 11, color: store.connected ? store.appColors.successColor : store.appColors.warningColor))]) )]),
+    child: Row(children: [Icon(Icons.memory, color: store.appColors.textSecondaryColor), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(store.t('machine'), style: const TextStyle(fontWeight: FontWeight.w700)), T('CocktailBot ESP', style: TextStyle(fontSize: 11, color: store.appColors.textSecondaryColor)), Text(store.connected ? store.t('online') : store.t('offline'), style: TextStyle(fontSize: 11, color: store.connected ? store.appColors.successColor : store.appColors.warningColor))]) )]),
   ));
 }
 
@@ -7855,7 +7872,7 @@ class SettingsPage extends StatelessWidget {
     final mixed = Color.lerp(accent, secondary, .5)!;
 
     final items = [
-      (store.t('settingsConnection'), store.connected ? tr('Raspberry Pi verbunden') : tr('Lokale GPIO-Steuerung'), Icons.wifi, accent, ConnectionPage(store: store)),
+      (store.t('settingsConnection'), store.connected ? tr('ESP verbunden') : tr('ESP-Steuerung'), Icons.wifi, accent, ConnectionPage(store: store)),
       (store.t('settingsLanguage'), '${store.t('settingsLanguageSub')}: ${store.appLanguage.nativeName}', Icons.language, secondary, LanguageSettingsPage(store: store)),
       (store.t('settingsDesign'), store.t('settingsDesignSub'), Icons.palette_outlined, accent, ThemeSettingsPage(store: store)),
       (store.t('Anzeige'), store.t('Sortierung und Cocktails pro Seite einstellen'), Icons.grid_view_outlined, mixed, CocktailDisplaySettingsPage(store: store)),
@@ -8078,9 +8095,11 @@ class _ConnectionPageState extends State<ConnectionPage> {
                     SizedBox(width: 12),
                     Expanded(
                       child: T(
-                        'Kiosk-Steuerung über den lokalen Raspberry-Pi-Dienst. '
-                        'Das Feld bleibt leer, wenn App und GPIO-API auf demselben '
-                        'Raspberry Pi laufen.',
+                        'Steuerung über den lokalen ESP-Controller. '
+                        'Auf iPhone/iPad oder Android die IP-Adresse bzw. den '
+                        'Hostnamen des ESP eintragen. In der Web-/Kiosk-Version '
+                        'kann das Feld leer bleiben, wenn App und API vom selben '
+                        'Host ausgeliefert werden.',
                       ),
                     ),
                   ],
@@ -8091,8 +8110,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
             TextField(
               controller: host,
               decoration: InputDecoration(
-                labelText: tr('API-Host (optional)'),
-                hintText: tr('leer = lokale Steuerung'),
+                labelText: 'ESP-Adresse / API-Host',
+                hintText: 'z. B. 192.168.4.1 oder cocktailbot.local',
                 prefixIcon: const Icon(Icons.router),
               ),
             ),
@@ -8119,7 +8138,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                 title: Text(widget.store.displayStatus()),
                 subtitle: Text(
                   widget.store.wifiHost.trim().isEmpty
-                      ? 'API: gleicher Host (/api)'
+                      ? (kIsWeb ? 'API: gleicher Host (/api)' : 'ESP-Adresse noch nicht eingetragen')
                       : 'API: ${widget.store.wifiHost}',
                 ),
               ),
@@ -10980,7 +10999,7 @@ class _SequencePageState extends State<SequencePage> {
       if (!busy) return;
     }
 
-    throw Exception('Zeitüberschreitung beim Warten auf die Raspberry-Steuerung');
+    throw Exception('Zeitüberschreitung beim Warten auf die ESP-Steuerung');
   }
 
   Future<void> _cancelCurrentJob() async {

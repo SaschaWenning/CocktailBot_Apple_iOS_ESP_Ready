@@ -1,5 +1,5 @@
 name: cocktailbot_app
-description: CocktailBot Raspberry Pi kiosk application
+description: CocktailBot app for controlling the local ESP cocktail machine
 publish_to: "none"
 version: 1.0.0+1
 

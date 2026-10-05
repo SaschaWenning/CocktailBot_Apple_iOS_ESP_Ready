@@ -1,21 +1,27 @@
-CocktailBot – komplette App-Dateien
+CocktailBot – Flutter-App mit ESP-Steuerung und iOS-Cloud-Build
 
 Enthalten:
-- lib/main.dart
+- lib/main.dart (vollständige App- und ESP-Steuerlogik)
 - pubspec.yaml
-- alle Cocktailbilder aus dem App-Paket
-- vollständiges CocktailBot-Startlogo
+- Cocktailbilder und Logo
+- codemagic.yaml für iOS-Cloud-Builds
+- tool/prepare_ios.py für den automatisch erzeugten Apple/Xcode-Unterbau
+- README_IOS_OHNE_MAC.md mit der Schritt-für-Schritt-Anleitung
 
-Einbau in dein bestehendes Flutter-Projekt:
-1. Inhalt dieses ZIPs in C:\FlutterProjekte\MixPilot kopieren.
-2. Vorhandene lib/, assets/ und pubspec.yaml ersetzen/zusammenführen.
-3. Danach in PowerShell:
-   cd C:\FlutterProjekte\MixPilot
-   flutter clean
-   flutter pub get
-   flutter run
+Android:
+Die bestehende HTTP-Steuerung bleibt erhalten. Wenn du dieses Paket in dein bereits
+funktionierendes Android-Flutter-Projekt übernimmst, lib/, assets/ und pubspec.yaml
+wie bisher zusammenführen/ersetzen und anschließend flutter pub get ausführen.
 
-Wichtig: Das ZIP enthält die komplette CocktailBot-App-Ebene. Dein vorhandener Flutter-Android-Projektordner bleibt bestehen.
+ESP-Verbindung:
+Auf nativen Geräten (Android/iPhone/iPad) unter Einstellungen > Verbindung die
+IP-Adresse oder den Hostnamen des ESP eintragen, zum Beispiel 192.168.4.1 oder
+cocktailbot.local. Die API-Pfade /api/status und /api/command bleiben unverändert.
+
+iPhone/iPad ohne eigenen Mac:
+Siehe README_IOS_OHNE_MAC.md. Codemagic erzeugt das fehlende Xcode-Projekt auf
+einem Cloud-Mac, setzt die Apple-Berechtigung für das lokale Netzwerk und kann
+eine signierte IPA erzeugen.
 
 Aktuelle Standard-Pumpenzuordnung:
 1 Wodka
