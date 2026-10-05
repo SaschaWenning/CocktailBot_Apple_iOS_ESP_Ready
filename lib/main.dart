@@ -7193,6 +7193,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                     '${tr('Alkoholgehalt')}: ${formatAlcoholPercent(alcoholPercent)} % vol · ${tr('Reiner Alkohol')}: ${pureAlcoholMl.toStringAsFixed(1).replaceAll('.', ',')} ml',
                     style: const TextStyle(fontSize: 11.5),
                   ),
+                ),
+              ],
             ),
           ],
           if (strengthSliderVisible) ...[
@@ -10425,7 +10427,6 @@ class _FillCardState extends State<FillCard> {
                     const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
               ),
               onChanged: (_) => _scheduleAutoSave(),
-              onChanged: (_) => _scheduleAutoSave(),
               onSubmitted: (_) => _saveValues(),
             ),
             const SizedBox(height: 8),
@@ -10461,10 +10462,8 @@ class _FillCardState extends State<FillCard> {
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
   }
 
   void _scheduleAutoSave() {

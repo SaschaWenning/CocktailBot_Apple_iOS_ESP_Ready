@@ -21,8 +21,13 @@ workflows:
         script: flutter pub get
       - name: CocoaPods installieren
         script: |
-          cd ios
-          pod install
+          if [ -f ios/Podfile ]; then
+            echo "Podfile gefunden - CocoaPods wird installiert."
+            cd ios
+            pod install
+          else
+            echo "Kein Podfile vorhanden - CocoaPods wird übersprungen."
+          fi
       - name: iOS-Simulator-Build
         script: flutter build ios --simulator --debug
     artifacts:
@@ -54,8 +59,13 @@ workflows:
         script: flutter pub get
       - name: CocoaPods installieren
         script: |
-          cd ios
-          pod install
+          if [ -f ios/Podfile ]; then
+            echo "Podfile gefunden - CocoaPods wird installiert."
+            cd ios
+            pod install
+          else
+            echo "Kein Podfile vorhanden - CocoaPods wird übersprungen."
+          fi
       - name: Apple-Code-Signierung anwenden
         script: xcode-project use-profiles
       - name: Signierte IPA bauen
