@@ -93,6 +93,14 @@ def patch_info_plist() -> None:
         "CocktailBot benötigt Zugriff auf das lokale Netzwerk, um den ESP-Controller "
         "der Cocktailmaschine zu finden und Steuerbefehle zu senden."
     )
+    data["NSPhotoLibraryUsageDescription"] = (
+        "CocktailBot benötigt Zugriff auf deine Fotomediathek, damit du ein eigenes "
+        "Bild für Cocktails und Rezepte auswählen kannst."
+    )
+    data["NSCameraUsageDescription"] = (
+        "CocktailBot benötigt Kamerazugriff, damit du bei der Bildauswahl ein Foto "
+        "für Cocktails und Rezepte aufnehmen kannst."
+    )
 
     ats = data.get("NSAppTransportSecurity")
     if not isinstance(ats, dict):
@@ -104,7 +112,7 @@ def patch_info_plist() -> None:
     with path.open("wb") as f:
         plistlib.dump(data, f, sort_keys=False)
 
-    print(f"Patched local-network privacy settings in {path.relative_to(ROOT)}")
+    print(f"Patched iOS privacy settings in {path.relative_to(ROOT)}")
 
 
 def patch_bundle_id(bundle_id: str) -> None:

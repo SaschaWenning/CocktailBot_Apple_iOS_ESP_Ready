@@ -46,3 +46,7 @@ Erst wenn dieser Workflow erfolgreich ist, den signierten Workflow **CocktailBot
 ## ESP-Verbindung
 
 Die vorhandene HTTP-Steuerung der App bleibt bestehen. Auf dem iPhone muss der Zugriff auf das lokale Netzwerk erlaubt werden. Anschließend wird in der App wie unter Android die IP/der Hostname des ESP verwendet.
+
+## Apple-Datenschutzhinweise (Build 7+)
+
+Das iOS-Vorbereitungsskript setzt automatisch die von Apple verlangten Zweckbeschreibungen für lokales Netzwerk, Fotomediathek und Kamera. Diese Einträge werden bei jedem Codemagic-Build neu in `ios/Runner/Info.plist` geschrieben.

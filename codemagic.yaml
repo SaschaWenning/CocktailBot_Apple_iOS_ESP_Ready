@@ -3,14 +3,12 @@ workflows:
     name: CocktailBot iOS Check (ohne Signierung)
     max_build_duration: 60
     instance_type: mac_mini_m2
-
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
         BUNDLE_ID: "de.cocktailbot.app"
-
     scripts:
       - name: iOS-Xcode-Projekt erzeugen und für ESP vorbereiten
         script: |
@@ -19,37 +17,45 @@ workflows:
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
           echo "iOS Xcode project is ready."
-
       - name: Flutter-Pakete laden
-        script: |
-          flutter pub get
-
+        script: flutter pub get
       - name: CocoaPods installieren
         script: |
           if [ -f ios/Podfile ]; then
+            echo "Podfile gefunden - CocoaPods wird installiert."
             cd ios
             pod install
           else
             echo "Kein Podfile vorhanden - CocoaPods wird übersprungen."
           fi
-
-      - name: iOS-Simulator-Build
+      - name: iOS-Datenschutzhinweise prüfen
         script: |
-          flutter build ios --simulator --debug
-
+          python3 - <<'PY'
+          import plistlib
+          with open('ios/Runner/Info.plist', 'rb') as f:
+              p = plistlib.load(f)
+          required = [
+              'NSLocalNetworkUsageDescription',
+              'NSPhotoLibraryUsageDescription',
+              'NSCameraUsageDescription',
+          ]
+          missing = [k for k in required if not p.get(k)]
+          if missing:
+              raise SystemExit('Fehlende Info.plist-Schlüssel: ' + ', '.join(missing))
+          print('Alle erforderlichen iOS-Datenschutzhinweise vorhanden.')
+          PY
+      - name: iOS-Simulator-Build
+        script: flutter build ios --simulator --debug
     artifacts:
       - build/ios/iphonesimulator/Runner.app
       - /tmp/xcodebuild_logs/*.log
-
 
   ios-release:
     name: CocktailBot iOS TestFlight
     max_build_duration: 120
     instance_type: mac_mini_m2
-
     integrations:
       app_store_connect: Codemagic
-
     environment:
       ios_signing:
         distribution_type: app_store
@@ -59,7 +65,6 @@ workflows:
       cocoapods: default
       vars:
         BUNDLE_ID: "de.cocktailbot.app"
-
     scripts:
       - name: iOS-Xcode-Projekt erzeugen und für ESP vorbereiten
         script: |
@@ -68,34 +73,43 @@ workflows:
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
           echo "iOS Xcode project is ready."
-
       - name: Flutter-Pakete laden
-        script: |
-          flutter pub get
-
+        script: flutter pub get
       - name: CocoaPods installieren
         script: |
           if [ -f ios/Podfile ]; then
+            echo "Podfile gefunden - CocoaPods wird installiert."
             cd ios
             pod install
           else
             echo "Kein Podfile vorhanden - CocoaPods wird übersprungen."
           fi
-
-      - name: Apple-Code-Signierung anwenden
+      - name: iOS-Datenschutzhinweise prüfen
         script: |
-          xcode-project use-profiles
-
+          python3 - <<'PY'
+          import plistlib
+          with open('ios/Runner/Info.plist', 'rb') as f:
+              p = plistlib.load(f)
+          required = [
+              'NSLocalNetworkUsageDescription',
+              'NSPhotoLibraryUsageDescription',
+              'NSCameraUsageDescription',
+          ]
+          missing = [k for k in required if not p.get(k)]
+          if missing:
+              raise SystemExit('Fehlende Info.plist-Schlüssel: ' + ', '.join(missing))
+          print('Alle erforderlichen iOS-Datenschutzhinweise vorhanden.')
+          PY
+      - name: Apple-Code-Signierung anwenden
+        script: xcode-project use-profiles
       - name: Signierte IPA bauen
         script: |
           flutter build ipa --release \
             --build-number=$PROJECT_BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
-
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
     publishing:
       app_store_connect:
         auth: integration
