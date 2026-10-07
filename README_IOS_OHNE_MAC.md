@@ -50,3 +50,9 @@ Die vorhandene HTTP-Steuerung der App bleibt bestehen. Auf dem iPhone muss der Z
 ## Apple-Datenschutzhinweise (Build 7+)
 
 Das iOS-Vorbereitungsskript setzt automatisch die von Apple verlangten Zweckbeschreibungen für lokales Netzwerk, Fotomediathek und Kamera. Diese Einträge werden bei jedem Codemagic-Build neu in `ios/Runner/Info.plist` geschrieben.
+
+## v5: Bilder vollständig lokal auf iPhone/Android
+
+Eigene Rezeptbilder werden nicht mehr an den ESP gesendet. Die App wählt die Bilddatei lokal aus, komprimiert sie auf dem Gerät zu JPEG und speichert sie anschließend als Base64 zusammen mit den lokalen App-Daten. Dadurch ist zum Auswählen oder Anzeigen eigener Rezeptbilder keine ESP-Verbindung erforderlich.
+
+Hinweis: Lokal auf einem Android-Gerät hinzugefügte Bilder werden nicht automatisch auf ein anderes iPhone übertragen. Jedes Gerät hat seinen eigenen lokalen App-Speicher.

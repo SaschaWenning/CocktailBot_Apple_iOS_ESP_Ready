@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15064,35 +15065,39 @@ class _RecipeEditorPageState extends State<RecipeEditorPage> {
         throw Exception('Bild ist größer als 25 MB');
       }
 
-      // Browser-Dateien haben aus Sicherheitsgründen keinen direkt nutzbaren
-      // Linux-Pfad. Deshalb werden die Bytes an den lokalen Raspberry-Dienst
-      // geschickt, dort mit Pillow gedreht/verkleinert und als JPEG
-      // zurückgegeben.
-      final response = await http
-          .post(
-            widget.store._apiUri('/api/images/optimize'),
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              'X-File-Name': Uri.encodeComponent(file.name),
-            },
-            body: bytes,
-          )
-          .timeout(const Duration(seconds: 20));
+      // Bilder werden vollständig lokal auf dem Gerät verarbeitet und gespeichert.
+      // Eine Verbindung zum ESP ist dafür ausdrücklich nicht erforderlich.
+      // Die native Komprimierung sorgt dafür, dass auch große Smartphone-Fotos
+      // nicht unnötig groß in den lokalen App-Daten landen.
+      var optimizedBytes = await FlutterImageCompress.compressWithList(
+        bytes,
+        minWidth: 1600,
+        minHeight: 1600,
+        quality: 82,
+        format: CompressFormat.jpeg,
+        keepExif: false,
+      );
 
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        var message = 'HTTP ${response.statusCode}';
-        try {
-          final decoded = jsonDecode(response.body);
-          if (decoded is Map && decoded['error'] != null) {
-            message = decoded['error'].toString();
-          }
-        } catch (_) {}
-        throw Exception(message);
+      // Für sehr große Bilder noch einmal etwas stärker komprimieren. Das hält
+      // SharedPreferences klein und macht die Rezeptübersicht schneller.
+      if (optimizedBytes.length > 2 * 1024 * 1024) {
+        optimizedBytes = await FlutterImageCompress.compressWithList(
+          bytes,
+          minWidth: 1200,
+          minHeight: 1200,
+          quality: 70,
+          format: CompressFormat.jpeg,
+          keepExif: false,
+        );
+      }
+
+      if (optimizedBytes.isEmpty) {
+        throw Exception(tr('Bild konnte nicht verarbeitet werden'));
       }
 
       if (!mounted) return;
       setState(() {
-        imagePath = 'data:image/jpeg;base64,${base64Encode(response.bodyBytes)}';
+        imagePath = 'data:image/jpeg;base64,${base64Encode(optimizedBytes)}';
       });
     } catch (error) {
       if (!mounted) return;
@@ -15175,13 +15180,28 @@ class _RecipeEditorPageState extends State<RecipeEditorPage> {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _pickImageFromFileBrowser,
-            icon: const Icon(Icons.folder_open_rounded),
+            icon: const Icon(Icons.photo_library_outlined),
             label: Text(
               imagePath == null
-                  ? tr('Bild im Dateibrowser auswählen')
-                  : tr('Bild ausgewählt'),
+                  ? tr('Bild auswählen')
+                  : tr('Bild ändern'),
             ),
           ),
+          if (imagePath != null && imagePath!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: cocktailImage(
+                  imagePath!,
+                  fallbackAsset: drinkAssets.first,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           Row(
             children: [

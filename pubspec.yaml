@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   file_picker: ^11.0.2
+  flutter_image_compress: ^2.5.1
   http: ^1.6.0
   qr_flutter: ^4.1.0
   shared_preferences: ^2.5.5
