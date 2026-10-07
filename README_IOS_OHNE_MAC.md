@@ -56,3 +56,6 @@ Das iOS-Vorbereitungsskript setzt automatisch die von Apple verlangten Zweckbesc
 Eigene Rezeptbilder werden nicht mehr an den ESP gesendet. Die App wählt die Bilddatei lokal aus, komprimiert sie auf dem Gerät zu JPEG und speichert sie anschließend als Base64 zusammen mit den lokalen App-Daten. Dadurch ist zum Auswählen oder Anzeigen eigener Rezeptbilder keine ESP-Verbindung erforderlich.
 
 Hinweis: Lokal auf einem Android-Gerät hinzugefügte Bilder werden nicht automatisch auf ein anderes iPhone übertragen. Jedes Gerät hat seinen eigenen lokalen App-Speicher.
+
+## Standard-IP des ESP
+Auf iOS und Android wird bei einer noch nicht gespeicherten ESP-Adresse automatisch `192.168.4.1` verwendet und im Verbindungsfeld angezeigt. In der Web-Version bleibt weiterhin Same-Origin möglich.

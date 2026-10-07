@@ -3229,7 +3229,8 @@ class MachineStore extends ChangeNotifier {
   AppColorThemeConfig appColors = AppColorThemeConfig.defaults();
   bool connected = false;
   ConnectionMode connectionMode = ConnectionMode.wifi;
-  String wifiHost = ''; // Web: leer = Same-Origin; iOS/Android: ESP-IP/Hostname eintragen
+  static const String defaultEspHost = '192.168.4.1';
+  String wifiHost = kIsWeb ? '' : defaultEspHost; // Mobil: ESP-Standard-IP; Web: leer = Same-Origin
   String status = 'Nicht verbunden';
   bool loaded = false;
   List<double> servingSizes = [200, 300, 400];
@@ -3530,6 +3531,14 @@ class MachineStore extends ChangeNotifier {
                 .toDouble();
       } catch (_) {}
     }
+
+    // Auf iOS/Android ist der CocktailBot-ESP standardmäßig unter 192.168.4.1
+    // erreichbar. Auch bestehende Installationen mit leer gespeichertem Host
+    // bekommen dadurch automatisch die Standardadresse angezeigt.
+    if (!kIsWeb && wifiHost.trim().isEmpty) {
+      wifiHost = defaultEspHost;
+    }
+
     if (storedCatalogVersion != defaultCatalogVersion) {
       _installDefaultCatalog();
       await save();
