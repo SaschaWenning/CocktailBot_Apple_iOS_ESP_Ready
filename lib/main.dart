@@ -2602,7 +2602,7 @@ String appText(AppLanguage language, String key) {
     'QR-Code scannen und mit PayPal bezahlen': 'Scan the QR code and pay with PayPal',
     'Raspberry Pi verbunden': 'Raspberry Pi connected',
     'Reserve in Prozent': 'Reserve in percent',
-    'Sende diese Geräte-ID an deinen CocktailBot-Anbieter. Du erhältst eine TXT-Lizenzdatei, die ausschließlich auf diesem Raspberry funktioniert. Speichere die Datei z. B. auf einem USB-Stick und importiere sie hier. Eine Internetverbindung ist nicht erforderlich.': 'Send this device ID to your CocktailBot provider. You will receive a TXT license file that works only on this Raspberry. Save it, for example, on a USB drive and import it here. No internet connection is required.',
+    'Sende diese Geräte-ID an deinen CocktailBot-Anbieter. Du erhältst eine TXT-Lizenzdatei, die ausschließlich mit diesem CocktailBot-ESP funktioniert. Speichere die Datei auf deinem Gerät und importiere sie hier. Eine Internetverbindung ist nicht erforderlich.': 'Send this device ID to your CocktailBot provider. You will receive a TXT license file that works only on this Raspberry. Save it, for example, on a USB drive and import it here. No internet connection is required.',
     'Shot Preis EUR': 'Shot price EUR',
     'Shots': 'Shots',
     'Sicherheit & Freigaben': 'Security & permissions',
@@ -4566,8 +4566,84 @@ class MachineStore extends ChangeNotifier {
       commercialDeviceId.isNotEmpty &&
       commercialLicensedMachineId == commercialDeviceId;
 
+  String _extractControllerDeviceId(Map<String, dynamic> data) {
+    const directKeys = <String>[
+      'deviceId',
+      'deviceID',
+      'device_id',
+      'machineId',
+      'machineID',
+      'machine_id',
+      'controllerId',
+      'controllerID',
+      'controller_id',
+      'espId',
+      'espID',
+      'esp_id',
+      'chipId',
+      'chipID',
+      'chip_id',
+      'macAddress',
+      'mac_address',
+      'mac',
+    ];
+
+    for (final key in directKeys) {
+      final value = data[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty && value.toLowerCase() != 'null') {
+        return value;
+      }
+    }
+
+    // Einige ESP-Firmwarestände liefern die Geräteinformationen verschachtelt.
+    for (final key in const <String>[
+      'device',
+      'controller',
+      'esp',
+      'system',
+      'info',
+      'license',
+    ]) {
+      final nested = data[key];
+      if (nested is Map) {
+        final id = _extractControllerDeviceId(
+          Map<String, dynamic>.from(nested),
+        );
+        if (id.isNotEmpty) return id;
+      }
+    }
+
+    return '';
+  }
+
+  Future<String> _fetchControllerDeviceIdFallback() async {
+    // /api/license/status ist autoritativ. Ältere ESP-Firmwarestände
+    // liefern die Hardware-ID teilweise nur im allgemeinen Status/Info-Endpunkt.
+    for (final path in const <String>[
+      '/api/status',
+      '/api/info',
+      '/api/device',
+    ]) {
+      try {
+        final response = await http
+            .get(_apiUri(path))
+            .timeout(const Duration(seconds: 2));
+        if (response.statusCode < 200 || response.statusCode >= 300) continue;
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map) continue;
+        final id = _extractControllerDeviceId(
+          Map<String, dynamic>.from(decoded),
+        );
+        if (id.isNotEmpty) return id;
+      } catch (_) {
+        // Nächsten kompatiblen ESP-Endpunkt versuchen.
+      }
+    }
+    return '';
+  }
+
   void _applyCommercialLicenseStatus(Map<String, dynamic> data) {
-    final deviceId = data['deviceId']?.toString().trim() ?? '';
+    final deviceId = _extractControllerDeviceId(data);
     commercialDeviceId = deviceId;
     commercialLicenseActive = data['active'] == true;
     commercialLicenseType = data['licenseType']?.toString() ??
@@ -4603,14 +4679,42 @@ class MachineStore extends ChangeNotifier {
         throw Exception(data['error']?.toString() ?? 'Lizenzstatus nicht verfügbar');
       }
       _applyCommercialLicenseStatus(data);
+
+      // Kompatibilität mit ESP-Firmwareständen, bei denen die Hardware-ID
+      // nicht im Lizenzstatus, sondern im allgemeinen Controllerstatus steht.
+      if (commercialDeviceId.isEmpty) {
+        final fallbackId = await _fetchControllerDeviceIdFallback();
+        if (fallbackId.isNotEmpty) {
+          commercialDeviceId = fallbackId;
+          paymentMachineId = fallbackId;
+          if (commercialLicenseActive) {
+            commercialLicensedMachineId = fallbackId;
+          }
+        }
+      }
+
+      if (commercialDeviceId.isEmpty && connected) {
+        commercialLicenseMessage =
+            'ESP verbunden, aber der Controller liefert keine Geräte-ID';
+      }
+
       await save();
       notifyListeners();
       return true;
     } catch (error) {
+      // Auch wenn der Lizenz-Endpunkt auf einem älteren ESP fehlt, versuchen wir
+      // die Controller-ID aus dem normalen Status zu lesen.
+      final fallbackId = await _fetchControllerDeviceIdFallback();
+      if (fallbackId.isNotEmpty) {
+        commercialDeviceId = fallbackId;
+        paymentMachineId = fallbackId;
+      }
       commercialLicenseActive = false;
       commercialLicensedMachineId = '';
       paypalPaymentEnabled = false;
-      commercialLicenseMessage = 'Lizenzprüfung nicht verfügbar: $error';
+      commercialLicenseMessage = fallbackId.isNotEmpty
+          ? 'Geräte-ID ermittelt; Lizenzstatus vom ESP nicht verfügbar'
+          : 'Lizenzprüfung nicht verfügbar: $error';
       notifyListeners();
       return false;
     }
@@ -12235,7 +12339,9 @@ class _CommercialLicensePageState extends State<CommercialLicensePage> {
   Widget build(BuildContext context) {
     final active = widget.store.commercialLicenseActive;
     final deviceId = widget.store.commercialDeviceId.isEmpty
-        ? tr('Wird ermittelt …')
+        ? (widget.store.connected
+            ? 'ESP liefert noch keine Geräte-ID'
+            : 'Mit ESP verbinden, um Geräte-ID zu ermitteln')
         : widget.store.commercialDeviceId;
 
     return PageFrame(
@@ -12311,7 +12417,7 @@ class _CommercialLicensePageState extends State<CommercialLicensePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    tr('Sende diese Geräte-ID an deinen CocktailBot-Anbieter. Du erhältst eine TXT-Lizenzdatei, die ausschließlich auf diesem Raspberry funktioniert. Speichere die Datei z. B. auf einem USB-Stick und importiere sie hier. Eine Internetverbindung ist nicht erforderlich.'),
+                    tr('Sende diese Geräte-ID an deinen CocktailBot-Anbieter. Du erhältst eine TXT-Lizenzdatei, die ausschließlich mit diesem CocktailBot-ESP funktioniert. Speichere die Datei auf deinem Gerät und importiere sie hier. Eine Internetverbindung ist nicht erforderlich.'),
                     style: TextStyle(
                       color: widget.store.appColors.textSecondaryColor,
                       height: 1.4,

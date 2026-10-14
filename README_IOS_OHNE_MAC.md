@@ -59,3 +59,20 @@ Hinweis: Lokal auf einem Android-Gerät hinzugefügte Bilder werden nicht automa
 
 ## Standard-IP des ESP
 Auf iOS und Android wird bei einer noch nicht gespeicherten ESP-Adresse automatisch `192.168.4.1` verwendet und im Verbindungsfeld angezeigt. In der Web-Version bleibt weiterhin Same-Origin möglich.
+
+## Änderungen v7
+
+- iOS-Homescreen-App-Icon aus dem CocktailBot-Logo wird beim CI-Build automatisch in `AppIcon.appiconset` installiert.
+- Gewerbelizenz: Geräte-ID wird weiterhin vom CocktailBot-ESP gelesen (nicht vom iPhone), jetzt mit kompatibler Erkennung mehrerer Feldnamen und Fallback über `/api/status`, `/api/info` und `/api/device`.
+- Bei fehlender Controller-ID zeigt die App einen klaren Verbindungs-/ESP-Hinweis statt dauerhaft nur „Wird ermittelt …“.
+- `NSLocationWhenInUseUsageDescription` und `ITSAppUsesNonExemptEncryption=false` werden für Apple automatisch gesetzt.
+
+
+## v8 – App-Store-Icon
+
+Das iOS-App-Icon wurde durch ein finales CocktailBot-Branding (dunkler Hintergrund, neongrünes Cocktailglas) ersetzt, damit Apple es nicht mehr als Platzhalter einstuft.
+
+
+## v9 – App-Icon wie Startbildschirm
+
+Das iOS-App-Icon verwendet jetzt das gleiche CocktailBot-Logo wie der Startbildschirm der App. Das vollständige Logo wird auf weißem Hintergrund als quadratisches iOS-App-Icon ausgegeben.

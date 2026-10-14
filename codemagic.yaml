@@ -16,7 +16,8 @@ workflows:
           python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
-          echo "iOS Xcode project is ready."
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+          echo "iOS Xcode project and CocktailBot app icon are ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
       - name: CocoaPods installieren
@@ -38,11 +39,14 @@ workflows:
               'NSLocalNetworkUsageDescription',
               'NSPhotoLibraryUsageDescription',
               'NSCameraUsageDescription',
+              'NSLocationWhenInUseUsageDescription',
           ]
           missing = [k for k in required if not p.get(k)]
           if missing:
               raise SystemExit('Fehlende Info.plist-Schlüssel: ' + ', '.join(missing))
           print('Alle erforderlichen iOS-Datenschutzhinweise vorhanden.')
+          if p.get('ITSAppUsesNonExemptEncryption') is not False:
+              raise SystemExit('ITSAppUsesNonExemptEncryption fehlt oder ist nicht false.')
           PY
       - name: iOS-Simulator-Build
         script: flutter build ios --simulator --debug
@@ -72,7 +76,8 @@ workflows:
           python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
-          echo "iOS Xcode project is ready."
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+          echo "iOS Xcode project and CocktailBot app icon are ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
       - name: CocoaPods installieren
@@ -94,11 +99,14 @@ workflows:
               'NSLocalNetworkUsageDescription',
               'NSPhotoLibraryUsageDescription',
               'NSCameraUsageDescription',
+              'NSLocationWhenInUseUsageDescription',
           ]
           missing = [k for k in required if not p.get(k)]
           if missing:
               raise SystemExit('Fehlende Info.plist-Schlüssel: ' + ', '.join(missing))
           print('Alle erforderlichen iOS-Datenschutzhinweise vorhanden.')
+          if p.get('ITSAppUsesNonExemptEncryption') is not False:
+              raise SystemExit('ITSAppUsesNonExemptEncryption fehlt oder ist nicht false.')
           PY
       - name: Apple-Code-Signierung anwenden
         script: xcode-project use-profiles
