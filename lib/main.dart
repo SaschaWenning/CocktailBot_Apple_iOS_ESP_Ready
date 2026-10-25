@@ -2432,7 +2432,7 @@ String appText(AppLanguage language, String key) {
     'ESP-Steuerung antwortet nicht': 'ESP control is not responding',
     'ESP-Steuerung nicht erreichbar': 'ESP control is not reachable',
     'Bitte ESP-Adresse eingeben': 'Please enter the ESP address',
-    'Steuerung über den lokalen ESP-Controller. Auf iPhone/iPad oder Android die IP-Adresse bzw. den Hostnamen des ESP eintragen. In der Web-/Kiosk-Version kann das Feld leer bleiben, wenn App und API vom selben Host ausgeliefert werden.': 'Control via the local ESP controller. On iPhone/iPad or Android, enter the ESP IP address or host name. In the web/kiosk version, the field can stay empty if the app and API are served from the same host.',
+    'Steuerung über den lokalen ESP-Controller. Trage die IP-Adresse bzw. den Hostnamen des ESP ein. In der Web-/Kiosk-Version kann das Feld leer bleiben, wenn App und API vom selben Host ausgeliefert werden.': 'Control via the local ESP controller. Enter the ESP IP address or host name. In the web/kiosk version, the field can stay empty if the app and API are served from the same host.',
     'Diese Einstellungen gelten für Cocktails, alkoholfreie Cocktails und Shots. Auf den Cocktail-Seiten selbst wird die obere Navigation angezeigt.': 'These settings apply to cocktails, alcohol-free cocktails and shots. The top navigation is shown on the cocktail pages.',
     'Laden': 'Load',
     'Rezepte': 'Recipes',
@@ -3532,7 +3532,7 @@ class MachineStore extends ChangeNotifier {
       } catch (_) {}
     }
 
-    // Auf iOS/Android ist der CocktailBot-ESP standardmäßig unter 192.168.4.1
+    // Auf nativen Geräten ist der CocktailBot-ESP standardmäßig unter 192.168.4.1
     // erreichbar. Auch bestehende Installationen mit leer gespeichertem Host
     // bekommen dadurch automatisch die Standardadresse angezeigt.
     if (!kIsWeb && wifiHost.trim().isEmpty) {
@@ -5717,7 +5717,7 @@ class MachineStore extends ChangeNotifier {
     final configuredHost = wifiHost.trim();
 
     // In der Web-/Kiosk-Version kann die API vom selben Host kommen.
-    // Native Apps (iOS/Android) haben dagegen keinen sinnvollen Same-Origin-
+    // Native Apps haben dagegen keinen sinnvollen Same-Origin-
     // Host und benötigen deshalb die IP-Adresse bzw. den Hostnamen des ESP.
     if (configuredHost.isEmpty) {
       if (kIsWeb) {
@@ -8212,8 +8212,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
                     Expanded(
                       child: T(
                         'Steuerung über den lokalen ESP-Controller. '
-                        'Auf iPhone/iPad oder Android die IP-Adresse bzw. den '
-                        'Hostnamen des ESP eintragen. In der Web-/Kiosk-Version '
+                        'Trage die IP-Adresse bzw. den Hostnamen des ESP ein. '
+                        'In der Web-/Kiosk-Version '
                         'kann das Feld leer bleiben, wenn App und API vom selben '
                         'Host ausgeliefert werden.',
                       ),
