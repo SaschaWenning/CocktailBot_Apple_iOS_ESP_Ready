@@ -45,20 +45,20 @@ Erst wenn dieser Workflow erfolgreich ist, den signierten Workflow **CocktailBot
 
 ## ESP-Verbindung
 
-Die vorhandene HTTP-Steuerung der App bleibt bestehen. Auf dem iPhone muss der Zugriff auf das lokale Netzwerk erlaubt werden. Anschließend wird in der App wie unter Android die IP/der Hostname des ESP verwendet.
+Die vorhandene HTTP-Steuerung der App bleibt bestehen. Auf dem iPhone muss der Zugriff auf das lokale Netzwerk erlaubt werden. Anschließend wird in der App die IP bzw. der Hostname des ESP verwendet.
 
 ## Apple-Datenschutzhinweise (Build 7+)
 
 Das iOS-Vorbereitungsskript setzt automatisch die von Apple verlangten Zweckbeschreibungen für lokales Netzwerk, Fotomediathek und Kamera. Diese Einträge werden bei jedem Codemagic-Build neu in `ios/Runner/Info.plist` geschrieben.
 
-## v5: Bilder vollständig lokal auf iPhone/Android
+## v5: Bilder vollständig lokal auf dem Mobilgerät
 
 Eigene Rezeptbilder werden nicht mehr an den ESP gesendet. Die App wählt die Bilddatei lokal aus, komprimiert sie auf dem Gerät zu JPEG und speichert sie anschließend als Base64 zusammen mit den lokalen App-Daten. Dadurch ist zum Auswählen oder Anzeigen eigener Rezeptbilder keine ESP-Verbindung erforderlich.
 
-Hinweis: Lokal auf einem Android-Gerät hinzugefügte Bilder werden nicht automatisch auf ein anderes iPhone übertragen. Jedes Gerät hat seinen eigenen lokalen App-Speicher.
+Hinweis: Lokal auf einem Gerät hinzugefügte Bilder werden nicht automatisch auf ein anderes Gerät übertragen. Jedes Gerät hat seinen eigenen lokalen App-Speicher.
 
 ## Standard-IP des ESP
-Auf iOS und Android wird bei einer noch nicht gespeicherten ESP-Adresse automatisch `192.168.4.1` verwendet und im Verbindungsfeld angezeigt. In der Web-Version bleibt weiterhin Same-Origin möglich.
+Auf unterstützten Mobilgeräten wird bei einer noch nicht gespeicherten ESP-Adresse automatisch `192.168.4.1` verwendet und im Verbindungsfeld angezeigt. In der Web-Version bleibt weiterhin Same-Origin möglich.
 
 ## Änderungen v7
 
@@ -76,3 +76,12 @@ Das iOS-App-Icon wurde durch ein finales CocktailBot-Branding (dunkler Hintergru
 ## v9 – App-Icon wie Startbildschirm
 
 Das iOS-App-Icon verwendet jetzt das gleiche CocktailBot-Logo wie der Startbildschirm der App. Das vollständige Logo wird auf weißem Hintergrund als quadratisches iOS-App-Icon ausgegeben.
+
+## v11 – Cocktailbilder bei Updates reparieren
+
+Die eingebauten Cocktailbilder werden beim Laden der App anhand der Rezept-ID automatisch wieder dem korrekten Asset unter `assets/drinks/cocktailbot/` zugeordnet, wenn ein lokal gespeicherter Rezeptdatensatz einen leeren oder veralteten Asset-Pfad enthält. Eigene lokal gewählte Bilder (`data:image/...`) werden nicht überschrieben. Codemagic prüft vor dem Build zusätzlich, ob die Cocktailbild-Assets vorhanden und in `pubspec.yaml` eingebunden sind.
+
+
+## v12 – App-Review 2.3.10
+
+Alle sichtbaren und dokumentarischen Hinweise auf andere mobile Plattformen wurden aus dieser iOS-Ausgabe entfernt. Der Codemagic-Workflow prüft zusätzlich `lib/` und `assets/` und bricht ab, falls dort entsprechende Plattformnamen auftauchen.

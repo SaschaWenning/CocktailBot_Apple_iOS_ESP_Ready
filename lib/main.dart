@@ -3184,6 +3184,58 @@ class PaymentStatusResult {
 
 class MachineStore extends ChangeNotifier {
   static const int defaultCatalogVersion = 3;
+  static const Map<String, String> bundledRecipeImages = <String, String>{
+    'big-john': 'assets/drinks/cocktailbot/big-john.png',
+    'malibu-ananas': 'assets/drinks/cocktailbot/malibu-ananas.png',
+    'malibu-sunrise': 'assets/drinks/cocktailbot/malibu-sunrise.png',
+    'peaches-cream': 'assets/drinks/cocktailbot/peaches-cream.png',
+    'planters-punch': 'assets/drinks/cocktailbot/planters-punch.png',
+    'solero': 'assets/drinks/cocktailbot/solero.png',
+    'sex-on-the-beach': 'assets/drinks/cocktailbot/sex-on-the-beach.png',
+    'mojito': 'assets/drinks/cocktailbot/mojito.png',
+    'passion-colada': 'assets/drinks/cocktailbot/passion-colada.png',
+    'long-island-iced-tea': 'assets/drinks/cocktailbot/long-island-iced-tea.png',
+    'bahama-mama': 'assets/drinks/cocktailbot/bahama-mama.png',
+    'swimming-pool': 'assets/drinks/cocktailbot/swimming-pool.png',
+    'tequila-sunrise': 'assets/drinks/cocktailbot/tequila-sunrise.png',
+    'touch-down': 'assets/drinks/cocktailbot/touch-down.png',
+    'zombie': 'assets/drinks/cocktailbot/zombie.png',
+    'mai-tai': 'assets/drinks/cocktailbot/mai-tai.png',
+    'tropical-sunrise': 'assets/drinks/cocktailbot/tropical-sunrise.png',
+    'passion-fizz': 'assets/drinks/cocktailbot/passion-fizz.png',
+    'orange-vanilla-dream': 'assets/drinks/cocktailbot/orange-vanilla-dream.png',
+    'citrus-splash': 'assets/drinks/cocktailbot/citrus-splash.png',
+    'pineapple-passion': 'assets/drinks/cocktailbot/pineapple-passion.png',
+    'citrus-cooler': 'assets/drinks/cocktailbot/citrus-cooler.png',
+    'tropical-sunset': 'assets/drinks/cocktailbot/tropical-sunset.png',
+    'pineapple-lime-fizz': 'assets/drinks/cocktailbot/pineapple-lime-fizz.png',
+    'passion-paradise': 'assets/drinks/cocktailbot/passion-paradise.png',
+    'vanilla-orange-dream': 'assets/drinks/cocktailbot/vanilla-orange-dream.png',
+    'grenadine-sunrise': 'assets/drinks/cocktailbot/grenadine-sunrise.png',
+    'caribbean-sunset': 'assets/drinks/cocktailbot/caribbean-sunset.png',
+    'night-in-blue': 'assets/drinks/cocktailbot/night-in-blue.png',
+    'el-mariachi': 'assets/drinks/cocktailbot/el-mariachi.png',
+    'green-eyes': 'assets/drinks/cocktailbot/green-eyes.png',
+    'hot-legs': 'assets/drinks/cocktailbot/hot-legs.png',
+    'tropical-fusion': 'assets/drinks/cocktailbot/tropical-fusion.png',
+    'sunny-fizz': 'assets/drinks/cocktailbot/sunny-fizz.png',
+    'donnergurgler': 'assets/drinks/cocktailbot/donnergurgler.png',
+    'don-juan': 'assets/drinks/cocktailbot/don-juan.png',
+    'tropical-derby': 'assets/drinks/cocktailbot/tropical-derby.png',
+    'vanity': 'assets/drinks/cocktailbot/vanity.png',
+    'grauer-panther': 'assets/drinks/cocktailbot/grauer-panther.png',
+    'sweet-cocktail': 'assets/drinks/cocktailbot/sweet-cocktail.png',
+    'holiday': 'assets/drinks/cocktailbot/holiday.png',
+    'barbados': 'assets/drinks/cocktailbot/barbados.png',
+    'bora-bora': 'assets/drinks/cocktailbot/bora-bora.png',
+    'sport-n-juicy': 'assets/drinks/cocktailbot/sport-n-juicy.png',
+    'targa-911': 'assets/drinks/cocktailbot/targa-911.png',
+    'maro': 'assets/drinks/cocktailbot/maro.png',
+    'coconut-kiss': 'assets/drinks/cocktailbot/coconut-kiss.png',
+    'virgin-colada': 'assets/drinks/cocktailbot/virgin-colada.png',
+    'virgin-solero': 'assets/drinks/cocktailbot/virgin-solero.png',
+  };
+
   final ingredients = <Ingredient>[
     Ingredient(id: 'vodka', name: 'Wodka', kind: IngredientKind.alcoholic, alcoholPercent: 40),
     Ingredient(id: 'dark-rum', name: 'Brauner Rum', kind: IngredientKind.alcoholic, alcoholPercent: 40),
@@ -3545,6 +3597,16 @@ class MachineStore extends ChangeNotifier {
     } else if (recipes.isEmpty) {
       _seedRecipes();
     }
+
+    // Bei Updates koennen alte/lokale Rezeptdaten einen leeren oder veralteten
+    // Asset-Pfad enthalten. Die eingebauten Cocktailbilder werden deshalb
+    // automatisch wieder ihrem festen Asset zugeordnet. Eigene Bilder bleiben
+    // unveraendert, weil data:image/... und Netzwerkpfade nicht ersetzt werden.
+    final repairedBundledImages = _repairBundledRecipeImages();
+    if (repairedBundledImages) {
+      await save();
+    }
+
     recipes.removeWhere(
       (recipe) => const {
         'malibu-colada',
@@ -4312,6 +4374,26 @@ class MachineStore extends ChangeNotifier {
         ],
       ),
       ]);
+  }
+
+  bool _repairBundledRecipeImages() {
+    var changed = false;
+    for (final recipe in recipes) {
+      final bundled = bundledRecipeImages[recipe.id];
+      if (bundled == null) continue;
+
+      final current = recipe.imagePath?.trim() ?? '';
+      // Eigene lokal gewaehlte Bilder (data:image/...) oder bewusst gesetzte
+      // Netzwerkbilder bleiben erhalten. Nur leere/veraltete Asset-Pfade der
+      // mitgelieferten Rezepte werden auf das bekannte App-Asset repariert.
+      if (current.isEmpty || current.startsWith('assets/')) {
+        if (current != bundled) {
+          recipe.imagePath = bundled;
+          changed = true;
+        }
+      }
+    }
+    return changed;
   }
 
   Future<void> save() async {

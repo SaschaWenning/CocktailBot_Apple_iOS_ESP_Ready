@@ -48,7 +48,7 @@ def generate_ios() -> None:
         shutil.rmtree(ios_dir)
 
     # flutter create can refresh common files. Back up the user's app source and
-    # manifest, then restore them so the working Android/ESP app logic stays intact.
+    # manifest, then restore them so the working ESP app logic stays intact.
     preserve = [ROOT / "lib" / "main.dart", ROOT / "pubspec.yaml"]
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)

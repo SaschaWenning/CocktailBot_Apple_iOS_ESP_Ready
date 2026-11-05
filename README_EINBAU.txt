@@ -8,13 +8,13 @@ Enthalten:
 - tool/prepare_ios.py für den automatisch erzeugten Apple/Xcode-Unterbau
 - README_IOS_OHNE_MAC.md mit der Schritt-für-Schritt-Anleitung
 
-Android:
+Mobile App:
 Die bestehende HTTP-Steuerung bleibt erhalten. Wenn du dieses Paket in dein bereits
-funktionierendes Android-Flutter-Projekt übernimmst, lib/, assets/ und pubspec.yaml
+funktionierendes Flutter-Projekt übernimmst, lib/, assets/ und pubspec.yaml
 wie bisher zusammenführen/ersetzen und anschließend flutter pub get ausführen.
 
 ESP-Verbindung:
-Auf nativen Geräten (Android/iPhone/iPad) unter Einstellungen > Verbindung die
+Auf unterstützten Mobilgeräten unter Einstellungen > Verbindung die
 IP-Adresse oder den Hostnamen des ESP eintragen, zum Beispiel 192.168.4.1 oder
 cocktailbot.local. Die API-Pfade /api/status und /api/command bleiben unverändert.
 

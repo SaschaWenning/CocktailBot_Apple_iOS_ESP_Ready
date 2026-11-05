@@ -20,6 +20,13 @@ workflows:
           echo "iOS Xcode project and CocktailBot app icon are ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
+      - name: Apple-Review Plattformhinweise prüfen
+        script: |
+          if grep -RniE "Android|Google Play|Play Store" lib assets 2>/dev/null; then
+            echo "Nicht erlaubter Hinweis auf andere mobile Plattform im sichtbaren App-Inhalt gefunden."
+            exit 1
+          fi
+          echo "Keine sichtbaren Hinweise auf andere mobile Plattformen gefunden."
       - name: CocoaPods installieren
         script: |
           if [ -f ios/Podfile ]; then
@@ -80,6 +87,13 @@ workflows:
           echo "iOS Xcode project and CocktailBot app icon are ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
+      - name: Apple-Review Plattformhinweise prüfen
+        script: |
+          if grep -RniE "Android|Google Play|Play Store" lib assets 2>/dev/null; then
+            echo "Nicht erlaubter Hinweis auf andere mobile Plattform im sichtbaren App-Inhalt gefunden."
+            exit 1
+          fi
+          echo "Keine sichtbaren Hinweise auf andere mobile Plattformen gefunden."
       - name: CocoaPods installieren
         script: |
           if [ -f ios/Podfile ]; then
