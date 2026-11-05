@@ -85,3 +85,13 @@ Die eingebauten Cocktailbilder werden beim Laden der App anhand der Rezept-ID au
 ## v12 – App-Review 2.3.10
 
 Alle sichtbaren und dokumentarischen Hinweise auf andere mobile Plattformen wurden aus dieser iOS-Ausgabe entfernt. Der Codemagic-Workflow prüft zusätzlich `lib/` und `assets/` und bricht ab, falls dort entsprechende Plattformnamen auftauchen.
+
+
+## v14 – App-Icon zuverlässig für App Store Connect
+
+Das iOS-App-Icon verwendet jetzt Apples aktuellen Single-1024-Asset-Catalog-Ansatz. Der Xcode-Build wird explizit auf `AppIcon` gesetzt. Nach dem IPA-Build prüft Codemagic zusätzlich das signierte App-Bundle: `Assets.car` muss vorhanden sein und `CFBundlePrimaryIcon/CFBundleIconName` muss `AppIcon` enthalten. Ein Build ohne korrekt registriertes App-Icon wird dadurch vor dem Upload gestoppt.
+
+
+## v15 – Cocktailbilder dauerhaft repariert
+
+Für mitgelieferte Cocktails wird das Bild jetzt direkt über die feste Rezept-ID dem bekannten Asset in `assets/drinks/cocktailbot/` zugeordnet. Alte, leere oder fehlerhafte `imagePath`-Werte aus SharedPreferences können die Bilder dadurch nicht mehr ausblenden. Selbst ausgewählte lokale Bilder (`data:image/...`) haben weiterhin Vorrang. Zusätzlich prüft Codemagic das fertige signierte IPA und bricht den Build ab, falls die Cocktailbild-Assets nicht physisch im App-Bundle enthalten sind.

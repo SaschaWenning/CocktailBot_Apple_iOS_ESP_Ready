@@ -2432,7 +2432,7 @@ String appText(AppLanguage language, String key) {
     'ESP-Steuerung antwortet nicht': 'ESP control is not responding',
     'ESP-Steuerung nicht erreichbar': 'ESP control is not reachable',
     'Bitte ESP-Adresse eingeben': 'Please enter the ESP address',
-    'Steuerung über den lokalen ESP-Controller. Gib auf deinem iPhone oder iPad die IP-Adresse oder den Hostnamen des ESP ein. In der Web-/Kiosk-Version kann das Feld leer bleiben, wenn App und API vom selben Host ausgeliefert werden.': 'Control via the local ESP controller. On your iPhone or iPad, enter the IP address or host name of the ESP. In the web/kiosk version, the field can stay empty if the app and API are served from the same host.',
+    'Steuerung über den lokalen ESP-Controller. Trage die IP-Adresse bzw. den Hostnamen des ESP ein. In der Web-/Kiosk-Version kann das Feld leer bleiben, wenn App und API vom selben Host ausgeliefert werden.': 'Control via the local ESP controller. Enter the ESP IP address or host name. In the web/kiosk version, the field can stay empty if the app and API are served from the same host.',
     'Diese Einstellungen gelten für Cocktails, alkoholfreie Cocktails und Shots. Auf den Cocktail-Seiten selbst wird die obere Navigation angezeigt.': 'These settings apply to cocktails, alcohol-free cocktails and shots. The top navigation is shown on the cocktail pages.',
     'Laden': 'Load',
     'Rezepte': 'Recipes',
@@ -3235,6 +3235,32 @@ class MachineStore extends ChangeNotifier {
     'virgin-colada': 'assets/drinks/cocktailbot/virgin-colada.png',
     'virgin-solero': 'assets/drinks/cocktailbot/virgin-solero.png',
   };
+
+  String resolvedRecipeImage(
+    Recipe recipe, {
+    required String fallbackAsset,
+  }) {
+    final current = recipe.imagePath?.trim() ?? '';
+
+    // Locally selected user images are stored as data URLs and always win.
+    if (current.startsWith('data:image/')) {
+      return current;
+    }
+
+    // Built-in recipes always use their known bundled asset. This avoids old,
+    // empty or stale imagePath values from SharedPreferences hiding the image.
+    final bundled = bundledRecipeImages[recipe.id];
+    if (bundled != null && bundled.isNotEmpty) {
+      return bundled;
+    }
+
+    // User-created recipes may still use another explicit image source.
+    if (current.isNotEmpty) {
+      return current;
+    }
+
+    return fallbackAsset;
+  }
 
   final ingredients = <Ingredient>[
     Ingredient(id: 'vodka', name: 'Wodka', kind: IngredientKind.alcoholic, alcoholPercent: 40),
@@ -7032,7 +7058,11 @@ class RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = recipe.imagePath ?? drinkAssets[index % drinkAssets.length];
+    final fallbackAsset = drinkAssets[index % drinkAssets.length];
+    final image = store.resolvedRecipeImage(
+      recipe,
+      fallbackAsset: fallbackAsset,
+    );
     final status = store.availabilityFor(recipe);
     final ingredientName = store.availabilityIngredientName(recipe);
     final unavailable = status == RecipeAvailability.unavailable;
@@ -7054,14 +7084,14 @@ class RecipeCard extends StatelessWidget {
       child: InkWell(
         onTap: () => onOpenRecipe(
           recipe,
-          drinkAssets[index % drinkAssets.length],
+          fallbackAsset,
         ),
         child: Stack(
           children: [
             Positioned.fill(
               child: cocktailImage(
                 image,
-                fallbackAsset: drinkAssets[index % drinkAssets.length],
+                fallbackAsset: fallbackAsset,
               ),
             ),
             const Positioned.fill(
@@ -7244,7 +7274,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   @override
   Widget build(BuildContext context) {
     final r = widget.recipe;
-    final image = r.imagePath ?? widget.fallbackAsset;
+    final image = widget.store.resolvedRecipeImage(
+      r,
+      fallbackAsset: widget.fallbackAsset,
+    );
     final responsive = CocktailBotResponsive.of(context);
     final kioskLandscape = responsive.useTopNavigation &&
         responsive.isLandscape &&
@@ -8294,7 +8327,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                     Expanded(
                       child: T(
                         'Steuerung über den lokalen ESP-Controller. '
-                        'Gib auf deinem iPhone oder iPad die IP-Adresse oder den Hostnamen des ESP ein. '
+                        'Trage die IP-Adresse bzw. den Hostnamen des ESP ein. '
                         'In der Web-/Kiosk-Version '
                         'kann das Feld leer bleiben, wenn App und API vom selben '
                         'Host ausgeliefert werden.',

@@ -122,54 +122,44 @@ def patch_info_plist() -> None:
 
 
 def patch_app_icon() -> None:
-    source_dir = ROOT / "tool" / "ios_appicon"
+    """Install the final CocktailBot icon using Xcode's current single-1024 workflow."""
+    source = ROOT / "tool" / "ios_appicon" / "AppIcon-1024.png"
     target_dir = ROOT / "ios" / "Runner" / "Assets.xcassets" / "AppIcon.appiconset"
-    if not source_dir.is_dir():
-        raise SystemExit(f"Missing iOS icon source directory: {source_dir}")
+    if not source.is_file():
+        raise SystemExit(f"Missing final iOS app icon: {source}")
     if not target_dir.is_dir():
         raise SystemExit(f"Missing generated AppIcon set: {target_dir}")
 
+    # Remove Flutter/Xcode template placeholder images so only the final icon remains.
+    for child in target_dir.iterdir():
+        if child.is_file():
+            child.unlink()
+
+    target = target_dir / "AppIcon-1024.png"
+    shutil.copy2(source, target)
+
     contents = {
         "images": [
-            {"idiom": "iphone", "size": "20x20", "scale": "2x", "filename": "Icon-App-20x20@2x.png"},
-            {"idiom": "iphone", "size": "20x20", "scale": "3x", "filename": "Icon-App-20x20@3x.png"},
-            {"idiom": "iphone", "size": "29x29", "scale": "2x", "filename": "Icon-App-29x29@2x.png"},
-            {"idiom": "iphone", "size": "29x29", "scale": "3x", "filename": "Icon-App-29x29@3x.png"},
-            {"idiom": "iphone", "size": "40x40", "scale": "2x", "filename": "Icon-App-40x40@2x.png"},
-            {"idiom": "iphone", "size": "40x40", "scale": "3x", "filename": "Icon-App-40x40@3x.png"},
-            {"idiom": "iphone", "size": "60x60", "scale": "2x", "filename": "Icon-App-60x60@2x.png"},
-            {"idiom": "iphone", "size": "60x60", "scale": "3x", "filename": "Icon-App-60x60@3x.png"},
-            {"idiom": "ipad", "size": "20x20", "scale": "1x", "filename": "Icon-App-20x20@1x.png"},
-            {"idiom": "ipad", "size": "20x20", "scale": "2x", "filename": "Icon-App-20x20@2x.png"},
-            {"idiom": "ipad", "size": "29x29", "scale": "1x", "filename": "Icon-App-29x29@1x.png"},
-            {"idiom": "ipad", "size": "29x29", "scale": "2x", "filename": "Icon-App-29x29@2x.png"},
-            {"idiom": "ipad", "size": "40x40", "scale": "1x", "filename": "Icon-App-40x40@1x.png"},
-            {"idiom": "ipad", "size": "40x40", "scale": "2x", "filename": "Icon-App-40x40@2x.png"},
-            {"idiom": "ipad", "size": "76x76", "scale": "1x", "filename": "Icon-App-76x76@1x.png"},
-            {"idiom": "ipad", "size": "76x76", "scale": "2x", "filename": "Icon-App-76x76@2x.png"},
-            {"idiom": "ipad", "size": "83.5x83.5", "scale": "2x", "filename": "Icon-App-83.5x83.5@2x.png"},
-            {"idiom": "ios-marketing", "size": "1024x1024", "scale": "1x", "filename": "Icon-App-1024x1024@1x.png"},
+            {
+                "filename": "AppIcon-1024.png",
+                "idiom": "universal",
+                "platform": "ios",
+                "size": "1024x1024",
+            }
         ],
-        "info": {"version": 1, "author": "xcode"},
+        "info": {"author": "xcode", "version": 1},
     }
-
     import json
-    for image in contents["images"]:
-        filename = image["filename"]
-        src = source_dir / filename
-        if not src.is_file():
-            raise SystemExit(f"Missing iOS app icon asset: {src}")
-        shutil.copy2(src, target_dir / filename)
-
     (target_dir / "Contents.json").write_text(
         json.dumps(contents, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    # Verify the marketing icon is RGB/RGBA-free and non-placeholder source is present.
-    marketing = target_dir / "Icon-App-1024x1024@1x.png"
-    if not marketing.is_file() or marketing.stat().st_size < 10000:
-        raise SystemExit("iOS marketing icon was not installed correctly.")
-    print("Installed finalized CocktailBot iOS app icon assets.")
+
+    if not target.is_file() or target.stat().st_size < 10000:
+        raise SystemExit("Final iOS app icon was not installed correctly.")
+
+    print("Installed final CocktailBot AppIcon (single 1024x1024 Xcode asset).")
+
 
 def patch_bundle_id(bundle_id: str) -> None:
     project = ROOT / "ios" / "Runner.xcodeproj" / "project.pbxproj"
@@ -190,8 +180,16 @@ def patch_bundle_id(bundle_id: str) -> None:
     )
     if count == 0:
         raise SystemExit("Could not find PRODUCT_BUNDLE_IDENTIFIER in Xcode project.")
+    # Explicitly make AppIcon the primary app icon asset catalog.
+    if "ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;" not in updated:
+        updated = updated.replace(
+            "PRODUCT_BUNDLE_IDENTIFIER = ",
+            "ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = ",
+        )
+
     project.write_text(updated, encoding="utf-8")
     print(f"Bundle identifier set to {bundle_id} ({count} build settings updated).")
+    print("Primary iOS app icon asset explicitly set to AppIcon.")
 
 
 def main() -> None:

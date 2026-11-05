@@ -16,7 +16,7 @@ workflows:
           python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
-          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
           echo "iOS Xcode project and CocktailBot app icon are ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
@@ -83,7 +83,7 @@ workflows:
           python3 tool/prepare_ios.py --bundle-id "$BUNDLE_ID"
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
-          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
           echo "iOS Xcode project and CocktailBot app icon are ready."
       - name: Flutter-Pakete laden
         script: flutter pub get
@@ -129,6 +129,61 @@ workflows:
           flutter build ipa --release \
             --build-number=$PROJECT_BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
+      - name: Cocktailbilder im fertigen IPA prüfen
+        script: |
+          set -e
+          IPA="$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit)"
+          test -n "$IPA"
+          TMP_DIR="$(mktemp -d)"
+          unzip -q "$IPA" -d "$TMP_DIR"
+          APP="$(find "$TMP_DIR/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$APP"
+
+          FLUTTER_ASSETS="$APP/Frameworks/App.framework/flutter_assets"
+          test -d "$FLUTTER_ASSETS"
+
+          for IMAGE in \
+            "assets/drinks/cocktailbot/big-john.png" \
+            "assets/drinks/cocktailbot/mojito.png" \
+            "assets/drinks/cocktailbot/sex-on-the-beach.png" \
+            "assets/drinks/cocktailbot/virgin-colada.png"
+          do
+            if [ ! -f "$FLUTTER_ASSETS/$IMAGE" ]; then
+              echo "FEHLER: Cocktailbild fehlt im signierten IPA: $IMAGE"
+              exit 1
+            fi
+          done
+
+          COUNT="$(find "$FLUTTER_ASSETS/assets/drinks/cocktailbot" -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+          echo "Cocktailbilder im signierten IPA: $COUNT"
+          if [ "$COUNT" -lt 49 ]; then
+            echo "FEHLER: Zu wenige Cocktailbilder im signierten IPA."
+            exit 1
+          fi
+
+          echo "OK: Cocktailbilder sind im signierten IPA enthalten."
+      - name: App-Icon im fertigen IPA prüfen
+        script: |
+          set -e
+          IPA="$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit)"
+          test -n "$IPA"
+          TMP_DIR="$(mktemp -d)"
+          unzip -q "$IPA" -d "$TMP_DIR"
+          APP="$(find "$TMP_DIR/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$APP"
+          test -f "$APP/Info.plist"
+          test -f "$APP/Assets.car"
+
+          echo "Prüfe primäres App-Icon im signierten App-Bundle:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons" "$APP/Info.plist"
+
+          ICON_NAME="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "$APP/Info.plist" 2>/dev/null || true)"
+          if [ "$ICON_NAME" != "AppIcon" ]; then
+            echo "FEHLER: Primäres App-Icon ist nicht als AppIcon registriert (gefunden: '$ICON_NAME')."
+            exit 1
+          fi
+
+          echo "OK: Das signierte IPA enthält Assets.car und verwendet AppIcon als primäres App-Icon."
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
